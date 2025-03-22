@@ -1,0 +1,69 @@
+name: Upstream Sync
+
+permissions:
+  contents: write
+  issues: write
+  actions: write
+
+on:
+  schedule:
+    - cron: '0 */6 * * *' # every 6 hours
+  workflow_dispatch:
+
+jobs:
+  sync_main_from_upstream:
+    name: Sync latest commits from upstream repo
+    runs-on: ubuntu-latest
+    if: ${{ github.event.repository.fork }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Sync upstream changes
+        id: sync
+        uses: aormsby/Fork-Sync-With-Upstream-action@v3.4
+        with:
+          upstream_sync_repo: stackblitz-labs/bolt.diy
+          upstream_sync_branch: main
+          target_sync_branch: main
+          target_repo_token: ${{ secrets.GITHUB_TOKEN }}
+          test_mode: false
+
+      - name: Sync check
+        if: failure()
+        uses: actions-cool/issues-helper@v3
+        with:
+          actions: 'create-issue'
+          title: '🚨 Sync Fail'
+          labels: '🚨 Sync Fail'
+          body: |
+            Due to a failure syncing the [bolt.diy][bolt.diy] upstream repository, GitHub has automatically suspended the scheduled automatic update. Please manually sync your fork.
+  sync_stable_from_upstream:
+    requires:
+      - sync_main_from_upstream
+    name: Sync latest commits from upstream repo
+    runs-on: ubuntu-latest
+    if: ${{ github.event.repository.fork }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Sync upstream changes
+        id: sync
+        uses: aormsby/Fork-Sync-With-Upstream-action@v3.4
+        with:
+          upstream_sync_repo: stackblitz-labs/bolt.diy
+          upstream_sync_branch: stable
+          target_sync_branch: stable
+          target_repo_token: ${{ secrets.GITHUB_TOKEN }}
+          test_mode: false
+
+      - name: Sync check
+        if: failure()
+        uses: actions-cool/issues-helper@v3
+        with:
+          actions: 'create-issue'
+          title: '🚨 Sync Fail'
+          labels: '🚨 Sync Fail'
+          body: |
+            Due to a failure syncing the [bolt.diy][bolt.diy] upstream repository, GitHub has automatically suspended the scheduled automatic update. Please manually sync your fork.
